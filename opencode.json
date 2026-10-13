@@ -1,0 +1,88 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "manager",
+  "subagent_depth": 2,
+  "agent": {
+    "manager": {
+      "mode": "primary",
+      "model": "opencode/nemotron-3.5-lightning-free",
+      "steps": 30,
+      "description": "Team lead that decomposes tasks and coordinates planner, builder, tester, and reviewer subagents",
+      "prompt": "{file:./agent-configs/manager.md}"
+    },
+    "planner": {
+      "mode": "subagent",
+      "model": "opencode/nemotron-3.5-lightning-free",
+      "steps": 15,
+      "description": "Architectural planning and task decomposition before implementation",
+      "prompt": "{file:./agent-configs/planner.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "external_directory": "deny"
+      }
+    },
+    "builder": {
+      "mode": "subagent",
+      "model": "opencode/nemotron-3.5-lightning-free",
+      "steps": 25,
+      "description": "Implements code changes in src/ and tests/",
+      "prompt": "{file:./agent-configs/builder.md}",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "src/**": "allow",
+          "tests/**": "allow",
+          "package.json": "allow",
+          "tsconfig.json": "allow"
+        },
+        "bash": {
+          "npm *": "allow",
+          "npx *": "allow",
+          "node *": "allow",
+          "git add *": "allow",
+          "rm *": "deny",
+          "del *": "deny"
+        },
+        "external_directory": "deny"
+      }
+    },
+    "tester": {
+      "mode": "subagent",
+      "model": "opencode/nemotron-3.5-lightning-free",
+      "steps": 10,
+      "description": "Runs test suites, linting, and build verification",
+      "prompt": "{file:./agent-configs/tester.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "npm test*": "allow",
+          "npm run *": "allow",
+          "npx *": "allow",
+          "node *": "allow",
+          "rm *": "deny"
+        },
+        "external_directory": "deny"
+      }
+    },
+    "reviewer": {
+      "mode": "subagent",
+      "model": "opencode/nemotron-3.5-lightning-free",
+      "steps": 10,
+      "description": "Reviews code diffs for bugs, security vulnerabilities, and quality standards",
+      "prompt": "{file:./agent-configs/reviewer.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "external_directory": "deny"
+      }
+    }
+  },
+  "compaction": {
+    "auto": true,
+    "keep": {
+      "tokens": 20000
+    },
+    "buffer": 16000
+  }
+}
