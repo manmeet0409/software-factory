@@ -23,7 +23,10 @@
 # misc
 .DS_Store
 *.pem
-data/*.db*
+# local data & runtime
+data/*
+!data/.gitkeep
+.screenshots/
 
 
 # debug

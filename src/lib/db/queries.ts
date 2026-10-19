@@ -1,13 +1,15 @@
-import { eq, asc, desc, count } from 'drizzle-orm';
+import { eq, asc, desc, count, or } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './index';
 import {
   tickets,
   comments,
   activityLogs,
+  chatMessages,
   type Ticket,
   type Comment,
   type ActivityLog,
+  type ChatMessageRecord,
   type TicketStatus,
   type CommentAuthor,
   type CommentType,
@@ -244,3 +246,101 @@ export function getActiveTicketCount(): number {
 
   return result?.count ?? 0;
 }
+
+/**
+ * Deletes a ticket by ID (cascade deletes comments and activity logs).
+ */
+export function deleteTicket(ticketId: string): boolean {
+  const result = db.delete(tickets).where(eq(tickets.id, ticketId)).run();
+  return result.changes > 0;
+}
+
+export interface SaveChatMessageOptions {
+  ticketCreated?: boolean;
+  promptMsgId?: string;
+  sessionId?: string;
+  pairMessageId?: string;
+  wallPinIds?: string[];
+}
+
+/**
+ * Saves a message to persistent chat history.
+ */
+export function saveChatMessage(
+  sender: 'user' | 'orchestrator',
+  text: string,
+  options?: SaveChatMessageOptions
+): ChatMessageRecord {
+  const now = Math.floor(Date.now() / 1000);
+  const record: ChatMessageRecord = {
+    id: uuidv4(),
+    sender,
+    text,
+    timestamp: now,
+    ticketCreated: options?.ticketCreated ?? false,
+    promptMsgId: options?.promptMsgId || null,
+    sessionId: options?.sessionId || null,
+    pairMessageId: options?.pairMessageId || null,
+    wallPinIds: options?.wallPinIds ? JSON.stringify(options.wallPinIds) : null,
+  };
+
+  db.insert(chatMessages).values(record).run();
+  return record;
+}
+
+/**
+ * Deletes a chat conversation turn (user prompt and/or orchestrator reply).
+ */
+export function deleteChatTurn(userMsgId: string, orchestratorMsgId?: string): boolean {
+  try {
+    if (orchestratorMsgId) {
+      db.delete(chatMessages)
+        .where(or(eq(chatMessages.id, userMsgId), eq(chatMessages.id, orchestratorMsgId)))
+        .run();
+    } else {
+      const msg = db.select().from(chatMessages).where(eq(chatMessages.id, userMsgId)).get();
+      if (msg?.pairMessageId) {
+        db.delete(chatMessages)
+          .where(or(eq(chatMessages.id, userMsgId), eq(chatMessages.id, msg.pairMessageId)))
+          .run();
+      } else {
+        db.delete(chatMessages).where(eq(chatMessages.id, userMsgId)).run();
+      }
+    }
+    return true;
+  } catch (err) {
+    console.error('Failed to delete chat turn:', err);
+    return false;
+  }
+}
+
+/**
+ * Retrieves persistent chat history ordered chronologically (most recent `limit` messages).
+ */
+export function getChatHistory(limit = 150): ChatMessageRecord[] {
+  const records = db
+    .select()
+    .from(chatMessages)
+    .orderBy(desc(chatMessages.timestamp))
+    .limit(limit)
+    .all();
+  return records.reverse();
+}
+
+/**
+ * Clears all persistent chat messages from the database.
+ */
+export function clearChatHistory(): boolean {
+  const result = db.delete(chatMessages).run();
+  return result.changes >= 0;
+}
+
+/**
+ * Updates an existing chat message text in the database.
+ */
+export function updateChatMessage(id: string, text: string): boolean {
+  const result = db.update(chatMessages).set({ text }).where(eq(chatMessages.id, id)).run();
+  return result.changes > 0;
+}
+
+

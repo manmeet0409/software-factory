@@ -3,18 +3,26 @@ import fs from 'fs';
 import path from 'path';
 import { WorktreeInfo } from './types';
 
+import { getTargetDirectory } from '@/lib/workspace/config';
+
 export class WorktreeManager {
-  private projectRoot: string;
-  private worktreeBaseDir: string;
+  private customProjectRoot?: string;
+  private customWorktreeBaseDir?: string;
 
   constructor(
-    projectRoot: string,
+    projectRoot?: string,
     worktreeBaseDir?: string
   ) {
-    this.projectRoot = path.resolve(projectRoot);
-    this.worktreeBaseDir = path.resolve(
-      worktreeBaseDir || path.resolve(this.projectRoot, '../software-factory-worktrees')
-    );
+    this.customProjectRoot = projectRoot ? path.resolve(projectRoot) : undefined;
+    this.customWorktreeBaseDir = worktreeBaseDir ? path.resolve(worktreeBaseDir) : undefined;
+  }
+
+  private get projectRoot(): string {
+    return this.customProjectRoot || getTargetDirectory();
+  }
+
+  private get worktreeBaseDir(): string {
+    return this.customWorktreeBaseDir || path.resolve(this.projectRoot, '../software-factory-worktrees');
   }
 
   // Normalize path for git commands (forward slashes for Windows compatibility)
@@ -84,15 +92,16 @@ export class WorktreeManager {
       }
     }
 
-    // Copy opencode.json (agent configs) into each new worktree if it exists
-    const srcOpencodeJson = path.join(this.projectRoot, 'opencode.json');
+    // Copy opencode.json (agent configs) from software factory root into each new worktree if it exists
+    const factoryRoot = path.resolve(process.cwd());
+    const srcOpencodeJson = path.join(factoryRoot, 'opencode.json');
     const destOpencodeJson = path.join(worktreeDir, 'opencode.json');
     if (fs.existsSync(srcOpencodeJson)) {
       fs.copyFileSync(srcOpencodeJson, destOpencodeJson);
     }
 
     // Also copy agent-configs directory if it exists
-    const srcAgentConfigs = path.join(this.projectRoot, 'agent-configs');
+    const srcAgentConfigs = path.join(factoryRoot, 'agent-configs');
     const destAgentConfigs = path.join(worktreeDir, 'agent-configs');
     if (fs.existsSync(srcAgentConfigs)) {
       fs.cpSync(srcAgentConfigs, destAgentConfigs, { recursive: true });

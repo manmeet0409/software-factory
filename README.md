@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Software Factory
 
-## Getting Started
+Autonomous software development lifecycle (SDLC) factory powered by **Next.js 16**, **OpenCode v2.0+ (ACP)**, and **Git Worktree Isolation**.
 
-First, run the development server:
+---
+
+## Architecture Overview
+
+* **Factory Orchestrator**: Conversational agent coordinating the Kanban board and multi-turn planning.
+* **Worker Agents**: OpenCode team (`manager`, `planner`, `builder`, `tester`, `reviewer`).
+* **Worktree Isolation**: Each active task executes in a dedicated git worktree (`../software-factory-worktrees/<ticketId>`), merging into `main` upon approval.
+* **Concurrency Cap**: Up to 4 active worker agents + 1 orchestrator session (5 maximum).
+* **Database**: SQLite WAL mode with Drizzle ORM tracking tickets, comments, activity logs, and chat chains.
+
+---
+
+## OpenCode v2.0 Integration
+
+See [docs/OPENCODE_UPDATES.md](docs/OPENCODE_UPDATES.md) for details on OpenCode v2.0.29 capabilities:
+* Native `worktree` and `session` management endpoints
+* Effect architecture with reduced RAM footprint
+* Subagent child-session streaming via ACP (`opencode/child-session-updates`)
+* `--standalone` mode for database lock isolation
+
+---
+
+## Quickstart
 
 ```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000) to view the factory dashboard.
